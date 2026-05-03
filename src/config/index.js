@@ -9,4 +9,9 @@ module.exports = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   houseEdge: parseFloat(process.env.HOUSE_EDGE || '2'),
   crashHashSeed: process.env.CRASH_HASH_SEED || 'default-seed',
+  nowpayments: {
+    apiKey: process.env.NOWPAYMENTS_API_KEY || '',
+    ipnSecret: process.env.NOWPAYMENTS_IPN_SECRET || '',
+    callbackUrl: process.env.NOWPAYMENTS_CALLBACK_URL || '',
+  },
 }

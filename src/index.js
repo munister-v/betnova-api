@@ -10,6 +10,7 @@ const morgan = require('morgan')
 const config = require('./config')
 const { setupSocket } = require('./services/socketService')
 const CrashEngine = require('./services/crashEngine')
+const RouletteEngine = require('./services/rouletteEngine')
 
 const app = express()
 const server = http.createServer(app)
@@ -69,6 +70,10 @@ setupSocket(io, app)
 // ── Crash engine ─────────────────────────────────────────────────────────────
 const crashEngine = new CrashEngine(io)
 crashEngine.start()
+
+// ── Roulette engine ─────────────────────────────────────────────────────────
+const rouletteEngine = new RouletteEngine(io)
+rouletteEngine.start()
 
 // ── Jackpot io ref ───────────────────────────────────────────────────────────
 app.set('io', io)

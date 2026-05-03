@@ -3,6 +3,7 @@ const router = express.Router()
 const { supabaseAdmin } = require('../config/supabase')
 const { authMiddleware } = require('../middleware/auth')
 const { generateFloat, hashSeed } = require('../utils/provablyFair')
+const { awardXP } = require('../utils/xp')
 const config = require('../config')
 
 const RED_NUMBERS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
@@ -86,6 +87,7 @@ router.post('/bet', authMiddleware, async (req, res) => {
       .select()
       .single()
 
+    awardXP(req.user.sub, betAmount).catch(() => {})
     return res.json({ success: true, bet })
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' })

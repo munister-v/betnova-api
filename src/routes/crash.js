@@ -3,6 +3,7 @@ const router = express.Router()
 const { supabaseAdmin } = require('../config/supabase')
 const { authMiddleware } = require('../middleware/auth')
 const { generateCrashMultiplier, generateServerSeed, hashSeed } = require('../utils/provablyFair')
+const { awardXP } = require('../utils/xp')
 const config = require('../config')
 
 // GET /api/crash/config
@@ -103,6 +104,7 @@ router.post('/bet', authMiddleware, async (req, res) => {
       return res.status(500).json({ success: false, error: 'Failed to place bet' })
     }
 
+    awardXP(userId, betAmount).catch(() => {})
     return res.json({ success: true, bet })
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' })

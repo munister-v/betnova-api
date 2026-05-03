@@ -3,6 +3,7 @@ const router = express.Router()
 const { supabaseAdmin } = require('../config/supabase')
 const { authMiddleware } = require('../middleware/auth')
 const { generateFloat, generateServerSeed, generateClientSeed, hashSeed } = require('../utils/provablyFair')
+const { awardXP } = require('../utils/xp')
 const config = require('../config')
 
 // GET /api/coinflip/config
@@ -64,6 +65,7 @@ router.post('/create', authMiddleware, async (req, res) => {
       return res.status(500).json({ success: false, error: 'Failed to create game' })
     }
 
+    awardXP(userId, betAmount).catch(() => {})
     return res.json({ success: true, game })
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' })
@@ -140,6 +142,7 @@ router.post('/game/:gameId/join', authMiddleware, async (req, res) => {
       .select()
       .single()
 
+    awardXP(userId, game.bet_amount).catch(() => {})
     return res.json({ success: true, game: updated, winnerSide, winnerId })
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' })

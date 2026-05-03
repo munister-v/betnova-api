@@ -3,6 +3,7 @@ const router = express.Router()
 const { supabaseAdmin } = require('../config/supabase')
 const { authMiddleware } = require('../middleware/auth')
 const { generateFloat, generateServerSeed, generateClientSeed, hashSeed } = require('../utils/provablyFair')
+const { awardXP } = require('../utils/xp')
 const config = require('../config')
 
 const GRID_SIZE = 25 // 5x5
@@ -89,6 +90,7 @@ router.post('/create', authMiddleware, async (req, res) => {
       .select('id, bet_amount, mine_count, revealed_positions, status, server_seed_hash, client_seed')
       .single()
 
+    awardXP(userId, betAmount).catch(() => {})
     return res.json({ success: true, game })
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error' })

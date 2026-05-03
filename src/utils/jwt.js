@@ -6,21 +6,21 @@ function signToken(payload) {
 }
 
 function setCookieToken(res, token) {
+  const isProd = process.env.NODE_ENV === 'production'
   res.cookie('platform_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: config.cookieDomain,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 }
 
 function clearCookieToken(res) {
+  const isProd = process.env.NODE_ENV === 'production'
   res.clearCookie('platform_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    domain: config.cookieDomain,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
   })
 }
 

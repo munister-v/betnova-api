@@ -49,6 +49,7 @@ app.use('/api/slots', require('./routes/slots'))
 app.use('/api/blackjack', require('./routes/blackjack'))
 const jackpotRouter = require('./routes/jackpot')
 app.use('/api/jackpot', jackpotRouter)
+app.use('/api/promo', require('./routes/promo'))
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))

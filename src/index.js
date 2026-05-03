@@ -47,6 +47,8 @@ app.use('/api/game-status', require('./routes/gameStatus'))
 app.use('/api/referrals', require('./routes/referrals'))
 app.use('/api/slots', require('./routes/slots'))
 app.use('/api/blackjack', require('./routes/blackjack'))
+const jackpotRouter = require('./routes/jackpot')
+app.use('/api/jackpot', jackpotRouter)
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))
@@ -66,6 +68,9 @@ setupSocket(io, app)
 // ── Crash engine ─────────────────────────────────────────────────────────────
 const crashEngine = new CrashEngine(io)
 crashEngine.start()
+
+// ── Jackpot io ref ───────────────────────────────────────────────────────────
+app.set('io', io)
 
 // ── Start ────────────────────────────────────────────────────────────────────
 server.listen(config.port, () => {

@@ -97,6 +97,35 @@ router.get('/leaderboard/weekly-wagering', async (req, res) => {
   }
 })
 
+// GET /api/xp/leaderboard/biggest-wins  — top single-bet profits all time
+router.get('/leaderboard/biggest-wins', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20
+
+    const { data } = await supabaseAdmin
+      .from('game_history')
+      .select('user_id, game_type, bet_amount, profit, multiplier, created_at, users(username, avatar_url)')
+      .gt('profit', 0)
+      .order('profit', { ascending: false })
+      .limit(limit)
+
+    const leaderboard = (data || []).map(row => ({
+      user_id:    row.user_id,
+      username:   row.users?.username || 'Anonymous',
+      avatar_url: row.users?.avatar_url || null,
+      game_type:  row.game_type,
+      bet_amount: row.bet_amount,
+      profit:     row.profit,
+      multiplier: row.multiplier,
+      created_at: row.created_at,
+    }))
+
+    return res.json({ success: true, leaderboard })
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
 // GET /api/xp/requirements
 router.get('/requirements', async (req, res) => {
   try {

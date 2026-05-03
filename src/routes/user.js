@@ -97,6 +97,66 @@ router.get('/statistics', authMiddleware, async (req, res) => {
   }
 })
 
+// POST /api/user/change-password
+router.post('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Both passwords required' })
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 6 characters' })
+    }
+
+    // Get user email
+    const { data: profile } = await supabaseAdmin
+      .from('users').select('email').eq('id', req.user.sub).single()
+    if (!profile) return res.status(404).json({ success: false, error: 'User not found' })
+
+    // Verify current password by trying to sign in
+    const { error: signInErr } = await supabaseAdmin.auth.signInWithPassword({
+      email: profile.email,
+      password: currentPassword,
+    })
+    if (signInErr) return res.status(401).json({ success: false, error: 'Current password is incorrect' })
+
+    // Update password
+    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(req.user.sub, {
+      password: newPassword,
+    })
+    if (updateErr) throw updateErr
+
+    return res.json({ success: true, message: 'Password changed successfully' })
+  } catch (err) {
+    console.error('change-password error:', err)
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
+// POST /api/user/change-email
+router.post('/change-email', authMiddleware, async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, error: 'Valid email required' })
+    }
+
+    // Check email not taken
+    const { data: existing } = await supabaseAdmin
+      .from('users').select('id').eq('email', email).maybeSingle()
+    if (existing) return res.status(409).json({ success: false, error: 'Email already in use' })
+
+    // Update in both auth and profile
+    await supabaseAdmin.auth.admin.updateUserById(req.user.sub, { email })
+    await supabaseAdmin.from('users').update({ email, updated_at: new Date().toISOString() }).eq('id', req.user.sub)
+
+    return res.json({ success: true, message: 'Email updated' })
+  } catch (err) {
+    console.error('change-email error:', err)
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
 // POST /api/user/regenerate-seed
 // Rotates provably fair seeds
 router.post('/regenerate-seed', authMiddleware, async (req, res) => {

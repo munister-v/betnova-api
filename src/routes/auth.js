@@ -9,6 +9,118 @@ const { authMiddleware } = require('../middleware/auth')
 // In-memory nonce store (use Redis in production)
 const nonceStore = new Map()
 
+// POST /api/auth/register
+// Creates account immediately (no email confirmation) and sets platform JWT cookie
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, username } = req.body
+
+    if (!email || !password || !username) {
+      return res.status(400).json({ success: false, error: 'Email, password and username are required' })
+    }
+    if (username.length < 3) {
+      return res.status(400).json({ success: false, error: 'Username must be at least 3 characters' })
+    }
+
+    // Check username uniqueness
+    const { data: existing } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('username', username)
+      .single()
+
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Username already taken' })
+    }
+
+    // Create user with admin API — email auto-confirmed, no verification email
+    const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name: username },
+    })
+
+    if (createError) {
+      if (createError.message?.toLowerCase().includes('already registered')) {
+        return res.status(400).json({ success: false, error: 'Email already registered' })
+      }
+      return res.status(400).json({ success: false, error: createError.message })
+    }
+
+    const authUser = authData.user
+
+    // Upsert profile row
+    const { data: profile, error: upsertError } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        id: authUser.id,
+        email: authUser.email,
+        username,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
+      .select()
+      .single()
+
+    if (upsertError) {
+      console.error('Profile upsert error:', upsertError)
+      return res.status(500).json({ success: false, error: 'Failed to create profile' })
+    }
+
+    const platformToken = signToken({
+      sub: authUser.id,
+      email: authUser.email,
+      username,
+    })
+
+    setCookieToken(res, platformToken)
+
+    return res.json({ success: true, user: { id: authUser.id, email: authUser.email, username } })
+  } catch (err) {
+    console.error('Register error:', err)
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
+// POST /api/auth/login
+// Email/password login — issues platform JWT cookie directly
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' })
+    }
+
+    const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password })
+
+    if (error || !data?.user) {
+      return res.status(401).json({ success: false, error: 'Invalid email or password' })
+    }
+
+    const { data: profile } = await supabaseAdmin
+      .from('users')
+      .select('id, email, username, balance')
+      .eq('id', data.user.id)
+      .single()
+
+    const username = profile?.username || data.user.user_metadata?.name || email.split('@')[0]
+
+    const platformToken = signToken({
+      sub: data.user.id,
+      email: data.user.email,
+      username,
+    })
+
+    setCookieToken(res, platformToken)
+
+    return res.json({ success: true, user: { id: data.user.id, email: data.user.email, username, balance: profile?.balance ?? 0 } })
+  } catch (err) {
+    console.error('Login error:', err)
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
 // POST /api/auth/exchange
 // Exchanges a Supabase access token for a platform JWT cookie
 router.post('/exchange', async (req, res) => {

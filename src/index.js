@@ -45,6 +45,7 @@ app.use('/api/payment', require('./routes/payment'))
 app.use('/api/game-history', require('./routes/gameHistory'))
 app.use('/api/game-status', require('./routes/gameStatus'))
 app.use('/api/referrals', require('./routes/referrals'))
+app.use('/api/slots', require('./routes/slots'))
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))

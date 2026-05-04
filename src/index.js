@@ -12,6 +12,8 @@ const { setupSocket } = require('./services/socketService')
 const CrashEngine = require('./services/crashEngine')
 const RouletteEngine = require('./services/rouletteEngine')
 const { setIo } = require('./utils/emitWin')
+const { startPriceRefresh } = require('./services/priceService')
+const depositMonitor = require('./services/depositMonitor')
 
 const app = express()
 const server = http.createServer(app)
@@ -72,6 +74,14 @@ app.use((err, req, res, next) => {
 // ── WebSocket ────────────────────────────────────────────────────────────────
 setupSocket(io, app)
 setIo(io) // allow routes to emit live:win events
+
+// ── Payment services ─────────────────────────────────────────────────────────
+startPriceRefresh()
+if (process.env.WALLET_MNEMONIC) {
+  depositMonitor.start()
+} else {
+  console.warn('[payment] WALLET_MNEMONIC not set — deposit monitoring disabled')
+}
 
 // ── Crash engine ─────────────────────────────────────────────────────────────
 const crashEngine = new CrashEngine(io)

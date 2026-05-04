@@ -11,6 +11,7 @@ const config = require('./config')
 const { setupSocket } = require('./services/socketService')
 const CrashEngine = require('./services/crashEngine')
 const RouletteEngine = require('./services/rouletteEngine')
+const { setIo } = require('./utils/emitWin')
 
 const app = express()
 const server = http.createServer(app)
@@ -53,6 +54,8 @@ app.use('/api/jackpot', jackpotRouter)
 app.use('/api/promo', require('./routes/promo'))
 app.use('/api/bonus', require('./routes/bonus'))
 app.use('/api/plinko', require('./routes/plinko'))
+app.use('/api/dice', require('./routes/dice'))
+app.use('/api/hilo', require('./routes/hilo'))
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))
@@ -68,6 +71,7 @@ app.use((err, req, res, next) => {
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
 setupSocket(io, app)
+setIo(io) // allow routes to emit live:win events
 
 // ── Crash engine ─────────────────────────────────────────────────────────────
 const crashEngine = new CrashEngine(io)

@@ -4,6 +4,7 @@ const { supabaseAdmin } = require('../config/supabase')
 const { authMiddleware } = require('../middleware/auth')
 const { generateFloat, generateServerSeed, generateClientSeed, hashSeed } = require('../utils/provablyFair')
 const { awardXP } = require('../utils/xp')
+const { emitWin } = require('../utils/emitWin')
 const config = require('../config')
 
 // Multiplier tables per risk level (indexed by slot: 0 = leftmost, rows = rightmost)
@@ -113,6 +114,10 @@ router.post('/bet', authMiddleware, async (req, res) => {
     })
 
     awardXP(userId, betAmount).catch(() => {})
+    if (multiplier > 1) {
+      const { data: usr } = await supabaseAdmin.from('users').select('username, avatar_url').eq('id', userId).single().catch(() => ({ data: null }))
+      emitWin({ gameType: 'plinko', username: usr?.username, avatarUrl: usr?.avatar_url, betAmount, profit: netProfit, multiplier })
+    }
 
     return res.json({
       success: true,

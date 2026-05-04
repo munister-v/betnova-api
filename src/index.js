@@ -52,6 +52,7 @@ const jackpotRouter = require('./routes/jackpot')
 app.use('/api/jackpot', jackpotRouter)
 app.use('/api/promo', require('./routes/promo'))
 app.use('/api/bonus', require('./routes/bonus'))
+app.use('/api/plinko', require('./routes/plinko'))
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))

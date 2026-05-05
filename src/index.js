@@ -58,6 +58,7 @@ app.use('/api/bonus', require('./routes/bonus'))
 app.use('/api/plinko', require('./routes/plinko'))
 app.use('/api/dice', require('./routes/dice'))
 app.use('/api/hilo', require('./routes/hilo'))
+app.use('/api/keno', require('./routes/keno'))
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }))

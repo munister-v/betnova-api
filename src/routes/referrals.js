@@ -81,6 +81,74 @@ router.post('/create', authMiddleware, async (req, res) => {
   }
 })
 
+// POST /api/referrals/claim — claim all pending commissions to balance
+router.post('/claim', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub
+
+    // Sum unclaimed commissions
+    const { data: pending, error } = await supabaseAdmin
+      .from('referral_uses')
+      .select('id, commission')
+      .eq('referrer_id', userId)
+      .eq('claimed', false)
+
+    if (error) return res.status(500).json({ success: false, error: error.message })
+
+    const pendingRows = pending || []
+    const totalClaim = parseFloat(pendingRows.reduce((s, r) => s + parseFloat(r.commission || 0), 0).toFixed(2))
+
+    if (totalClaim <= 0) {
+      return res.status(400).json({ success: false, error: 'Nothing to claim' })
+    }
+
+    const ids = pendingRows.map(r => r.id)
+
+    // Mark as claimed
+    await supabaseAdmin
+      .from('referral_uses')
+      .update({ claimed: true, claimed_at: new Date().toISOString() })
+      .in('id', ids)
+
+    // Credit balance
+    const { data: user } = await supabaseAdmin
+      .from('users').select('balance').eq('id', userId).single()
+    const newBalance = parseFloat(((user?.balance || 0) + totalClaim).toFixed(2))
+    await supabaseAdmin.from('users').update({ balance: newBalance }).eq('id', userId)
+
+    // Insert transaction record
+    await supabaseAdmin.from('transactions').insert({
+      user_id: userId,
+      type: 'referral_claim',
+      amount: totalClaim,
+      status: 'completed',
+      metadata: { claim_count: ids.length },
+    }).catch(() => {})
+
+    return res.json({ success: true, claimed: totalClaim, newBalance })
+  } catch (err) {
+    console.error('Referral claim error:', err)
+    return res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
+// GET /api/referrals/pending — get unclaimed commission amount
+router.get('/pending', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub
+    const { data, error } = await supabaseAdmin
+      .from('referral_uses')
+      .select('commission')
+      .eq('referrer_id', userId)
+      .eq('claimed', false)
+    if (error) return res.json({ success: true, pending: 0 })
+    const pending = parseFloat((data || []).reduce((s, r) => s + parseFloat(r.commission || 0), 0).toFixed(2))
+    return res.json({ success: true, pending })
+  } catch {
+    return res.json({ success: true, pending: 0 })
+  }
+})
+
 // GET /api/referrals/users — list referred users
 router.get('/users', authMiddleware, async (req, res) => {
   try {
